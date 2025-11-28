@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Тест формы</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, textarea { width: 300px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 10px 20px; background: #007cba; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a87; }
+        #result { margin-top: 20px; padding: 15px; background: #f5f5f5; border-radius: 4px; display: none; }
+    </style>
+</head>
+<body>
+    <h1>Тест отправки формы</h1>
+    
+    <form id="myForm">
+        <div class="form-group">
+            <label for="firstname">Имя:</label>
+            <input type="text" id="firstname" name="firstname" value="Валерия" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="lastname">Фамилия:</label>
+            <input type="text" id="lastname" name="lastname" value="Саканцева" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="group">Группа:</label>
+            <input type="text" id="group" name="group" value="ат-01" required>
+        </div>
+        
+        <div class="form-group">
+            <label for="message">Сообщение:</label>
+            <textarea id="message" name="message" rows="4" required>Привет</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="myimg">Изображение (опционально):</label>
+            <input type="file" id="myimg" name="myimg" accept="image/*">
+        </div>
+        
+        <button type="submit">Отправить данные</button>
+    </form>
+
+    <div id="result">
+        <h2>Результат:</h2>
+        <pre id="result-content"></pre>
+    </div>
+
+    <script>
+        document.getElementById('myForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const resultDiv = document.getElementById('result');
+            const resultContent = document.getElementById('result-content');
+            
+            // Показываем загрузку
+            resultContent.textContent = "Отправка данных...";
+            resultDiv.style.display = 'block';
+            
+            try {
+                // Пробуем разные серверы
+                const servers = [
+                    'https://httpbin.org/post',
+                    'https://postman-echo.com/post',
+                    'https://jsonplaceholder.typicode.com/posts'
+                ];
+                
+                let response;
+                let lastError;
+                
+                for (const server of servers) {
+                    try {
+                        console.log(`Пробуем сервер: ${server}`);
+                        response = await fetch(server, {
+                            method: 'POST',
+                            body: server.includes('jsonplaceholder') ? 
+                                JSON.stringify(Object.fromEntries(formData)) : formData,
+                            headers: server.includes('jsonplaceholder') ? 
+                                {'Content-Type': 'application/json'} : {}
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            resultContent.textContent = `Сервер: ${server}\n\n` + JSON.stringify(data, null, 2);
+                            console.log('Успешный ответ:', data);
+                            return;
+                        }
+                    } catch (error) {
+                        lastError = error;
+                        console.log(`Сервер ${server} не доступен:`, error.message);
+                    }
+                }
+                
+                // Если все серверы недоступны
+                throw new Error('Все тестовые серверы недоступны. Последняя ошибка: ' + lastError?.message);
+                
+            } catch (error) {
+                resultContent.textContent = 'Ошибка отправки:\n' + error.message + 
+                                          '\n\nВозможные причины:\n' +
+                                          '1. Нет подключения к интернету\n' +
+                                          '2. Браузер блокирует запрос (CORS)\n' +
+                                          '3. Файрвол блокирует запрос';
+                console.error('Ошибка:', error);
+            }
+        });
+    </script>
+</body>
+</html>
